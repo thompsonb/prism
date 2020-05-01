@@ -1,0 +1,12 @@
+cand.en
+ref.en
+src.fr
+data.sp.src
+data.sp.tgt
+data.src
+data_bin
+__pycache__/
+*~
+m39v1.tar
+m39v1/
+.idea/
