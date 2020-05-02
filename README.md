@@ -203,7 +203,7 @@ If you the Prism metric and/or the provided multilingual NMT model, please cite:
     title={Automatic Machine Translation Evaluation in Many Languages via Zero-Shot Paraphrasing},
     author={Brian Thompson and Matt Post},
     year={2020},
-    publisher = {arXiv preprint arXiv:2004.14564}
+    publisher = {arXiv preprint arXiv:2004.14564},
     url={https://arxiv.org/abs/2004.14564}
 }
 ```
