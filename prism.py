@@ -14,6 +14,9 @@ from fairseq import checkpoint_utils
 from fairseq.data import LanguagePairDataset
 from sacrebleu import get_source_file, get_reference_files, DATASETS, get_langpairs_for_testset
 
+# modified version of fairseq.sequence_scorer.SequenceScorer which adds softmax temperature control
+from modified_sequence_scorer import SequenceScorer
+
 logger = logging.getLogger('prism')
 logger.setLevel(logging.INFO)
 
@@ -45,7 +48,7 @@ def hash_model(model_dir):
 
 
 class Prism:
-    def __init__(self, model_dir, lang):
+    def __init__(self, model_dir, lang, temperature=1.0):
         '''
         model_dir should contain:
          1) checkpoint.pt: the fairseq model
@@ -59,6 +62,7 @@ class Prism:
         self.sp.Load(model_dir + '/spm.model')
 
         self.lang = lang
+        self.temperature = temperature
 
         # this prints things and I can't figure out how to disable it
         sys.stdout = open(os.devnull, 'w')
@@ -70,9 +74,7 @@ class Prism:
 
         self.use_cuda = torch.cuda.is_available()
 
-        self.args.score_reference = True
-        self.args.print_alignment = False  # this is ignored, appears to be fairseq bug, makes things WAY slower
-        self.generator = self.task.build_generator(self.args)
+        self.generator = SequenceScorer(self.task.target_dictionary, temperature=temperature)
 
         for model in self.models:
             if self.use_cuda:
@@ -104,7 +106,8 @@ class Prism:
             logger.warning('unrecognized model, using hash to identify')
             model_name = self.model_hash
 
-        return dict(version='0.1', model=model_name, seg_scores='avg_log_prob', sys_scores='avg_log_prob', log_base=2)
+        return dict(version='0.1', model=model_name, seg_scores='avg_log_prob', 
+                    sys_scores='avg_log_prob', log_base=2, temperature=self.temperature)
 
     def _binarize(self, sentence: str) -> torch.LongTensor:
         return self.task.source_dictionary.encode_line(sentence, add_if_not_exist=False).long()
@@ -233,7 +236,8 @@ def parse_sacrebleu_uri(uri: str) -> Tuple[str]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Prism: MT metric based on multilingual NMT')
+    parser = argparse.ArgumentParser(description='Prism: MT metric based on multilingual NMT',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--cand', required=False, type=argparse.FileType('rt'), default=sys.stdin,
                         help='Candidate text file. If not provided, candidates are read from stdin.')
     parser.add_argument('--ref', required=False, type=str,
@@ -246,6 +250,8 @@ def main():
                              'You must provide exactly one of --ref or --src.')
     parser.add_argument('--model-dir', required=True, type=str, help='Model Directory')
     parser.add_argument('--lang', type=str, help='2-character language code (ISO 639-1)')
+    parser.add_argument('--temperature', type=float, default=1.0, help='Softmax temperature: '
+                        'values >1.0 produce more uniform samples and values <1.0 produce sharper samples')
     parser.add_argument('--segment-scores', action='store_true',
                         help='Print per-sentence scores instead of corpus level score')
     parser.add_argument('--debug', action='store_true', help='Print debug info')
@@ -285,6 +291,9 @@ def main():
         logger.error("The language must be specified (--lang XX), XX the ISO 639-1 code")
         sys.exit(1)
 
+    if args.temperature <= 0:
+        raise Exception('temperature must be > 0')
+
     args.cand = args.cand.readlines()
 
     n_gpus = torch.cuda.device_count()
@@ -292,7 +301,7 @@ def main():
     if len(args.cand) > 50 and n_gpus == 0:
         logging.warning('Running on CPU is slow...')
 
-    prism = Prism(model_dir=args.model_dir, lang=args.lang)
+    prism = Prism(model_dir=args.model_dir, lang=args.lang, temperature=args.temperature)
     scores = prism.score(cand=args.cand, ref=args.ref, src=args.src, segment_scores=args.segment_scores)
 
     logger.info(f'Prism identifier: {prism.identifier()}')
