@@ -12,15 +12,17 @@ segment-level human correlation.
 
 We provide a large, pre-trained multilingual NMT model which we use as a multilingual paraphraser, 
 but the model may also be of use to the research community beyond MT metrics.
+We provide examples of using the model for both [multilingual translation](translation/README.md)
+and [paraphrase generation](paraphrase_generation/README.md).
 
-Prism scores detokenized, human-formatted inputs, and not tokenized ones.
-All preprocessing is applied internally, making it particularly easy to use.
-This document describes how to install and use prism.
+Prism scores raw, untokenized text; all preprocessing is applied internally.
+This document describes how to install and use Prism.
 
 # Installation
 
-Prism requires a version of [Fairseq](https://github.com/pytorch/fairseq) compatible with the provided pretrained model.
-You may wish to start with a clean environment:
+Prism requires a version of [Fairseq](https://github.com/pytorch/fairseq)
+compatible with the provided pretrained model.
+We recommend starting with a clean environment:
 
 ```bash
 conda create -n prismenv python=3.7 -y
@@ -44,9 +46,10 @@ pip install -r requirements.txt
 ```bash
 wget http://data.statmt.org/prism/m39v1.tar
 tar xf m39v1.tar
+export MODEL_DIR=m39v1/
 ```
 
-# Usage: Command Line
+# Metric Usage: Command Line
 
 Create test candidate/reference files:
 
@@ -58,7 +61,7 @@ echo -e "Bonjour le monde.\nC'est un test." >> src.fr
 
 To obtain system-level metric scores, run:
 ```bash
-./prism.py --cand cand.en --ref ref.en --lang en --model-dir m39v1/
+./prism.py --cand cand.en --ref ref.en --lang en --model-dir $MODEL_DIR/
 ```
 Here, "ref.en" is the (untokenized) human reference, and "cand.en" is the (untokenized) system output.
 This command will print some logging information to STDERR, including a model/version identifier,
@@ -70,7 +73,7 @@ and print the system-level score (negative, higher is better) to STDOUT:
 Candidates can also be piped into prism.py:
 
 ```bash
-cat cand.en | ./prism.py --ref ref.en --lang en --model-dir m39v1/
+cat cand.en | ./prism.py --ref ref.en --lang en --model-dir $MODEL_DIR/
 ```
 
 To score output using the source instead of the reference
@@ -78,16 +81,16 @@ To score output using the source instead of the reference
 Note that --lang still specifies the target/reference language:
 
 ```bash
-./prism.py --cand cand.en --src src.fr --lang en --model-dir m39v1/ 
+./prism.py --cand cand.en --src src.fr --lang en --model-dir $MODEL_DIR/ 
 ```
 
 Prism also has access to all WMT test sets via the
-[sacrebleu](https://github.com/mjpost/sacrebleu) API. These can be
+[sacreBLEU](https://github.com/mjpost/sacrebleu) API. These can be
 specified as arguments to `--src` and `--ref`, 
 for a hypothetical system output $cand, as follows: 
 
 ```bash
-./prism.py --cand $cand --ref sacrebleu:wmt19:de-en --model-dir m39v1/
+./prism.py --cand $cand --ref sacrebleu:wmt19:de-en --model-dir $MODEL_DIR/
 ```
 which will cause it to use the English reference from the WMT19 German--English test set.
 (Since the language is known, no `--lang` is needed).
@@ -98,13 +101,15 @@ To see all options, including segment-level scoring, run:
 ./prism.py -h
 ```
 
-# Usage: Python Module
+# Metric Usage: Python Module
 
 All functionality is also available in Python, for example:
 
 ```python
+import os
 from prism import Prism
-prism = Prism(model_dir='m39v1/', lang='en')
+
+prism = Prism(model_dir=os.environ['MODEL_DIR'], lang='en')
 
 print('Prism identifier:', prism.identifier())
 
@@ -126,6 +131,18 @@ Which should produce:
 >System-level QE-as-metric: -1.8306842  
 >Segment-level QE-as-metric: [-2.462842  -1.1985264]  
 
+
+# Multilingual Translation
+The Prism model is simply a multilingual NMT model, and can be used for translation --  see the [multilingual translation README](translation/README.md).
+
+# Paraphrase Generation
+
+Attempting to generate paraphrases from the Prism model via naive beam search
+(e.g. "translate" from French to French) results in trivial copies most of the time.
+However, we provide a simple algorithm to discourage copying
+and enable paraphrase generation in many languages -- see the [paraphrase generation README](paraphrase_generation/README.md).
+
+
 # Supported Languages
 
 Albanian (sq), Arabic (ar), Bengali (bn), Bulgarian (bg), 
@@ -138,62 +155,7 @@ Norwegian (no), Polish (pl), Portuguese (pt), Romanian, Moldavan (ro),
 Russian (ru), Serbian (sr), Slovak (sk), Slovene (sl), Spanish; Castilian (es),
 Swedish (sv), Turkish (tr), Ukrainian (uk), Vietnamese (vi)
 
-# Translating with the Multilingual NMT Model
 
-If you wish to use the provided multilingual NMT model for translation, 
-you will need to manually apply sentencpiece and 
-force decode the output language tag (e.g., "\<fr\>") as the first token, as shown in the example below.
-
-You will need to install [sentencepiece](https://github.com/google/sentencepiece).
-
-Start with an example input file:
-```bash
-echo -e "Hi world.\nThis is a Test.\nSome of my Best Friends are Linguists." > data.src
-```
-
-Apply sentencepiece to the source file only:
-```bash
-spm_encode --model=m39v1/spm.model --output_format=piece < data.src > data.sp.src
-```
-
-Make a dummy target file 
-with the same number of lines as the source file which contains
-the desired a language code for each line.
-Note that the language tags are in the model vocabulary 
-and should not be split using sentencepiece:
-
-```bash
-LANG_CODE=fr
-awk '{print "<'$LANG_CODE'>"}' data.sp.src > data.sp.tgt
-```
-
-Binarize the input data:
-
-```bash
-fairseq-preprocess --source-lang src --target-lang tgt \
-    --tgtdict m39v1/dict.tgt.txt --srcdict m39v1/dict.src.txt \
-    --testpref data.sp --destdir data_bin
-```
-
-Translate, force decoding the language tag to produce output in the desired language
-
-```bash
-fairseq-generate data_bin  --path m39v1/checkpoint.pt  --prefix-size 1 --remove-bpe sentencepiece
-```
-
-Which should produce output like:
->S-2     Some of my Best Friends are Linguists.  
->T-2     <fr>  
->H-2     -0.33040863275527954    <fr> Certains de mes meilleurs amis sont linguistes.  
->P-2     -2.1120 -0.5800 -0.1343 -0.1266 -0.1420 -0.1157 -0.0762 -0.0482 -0.1008 -0.5435 -0.0797 -0.1332 -0.1031  
->S-1     This is a Test.  
->T-1     <fr>  
->H-1     -0.5089232325553894     <fr> C'est un test.  
->P-1     -2.4594 -0.5629 -0.3363 -0.0851 -0.2041 -0.1533 -0.1690 -0.1013  
->S-0     Hi world.  
->T-0     <fr>  
->H-0     -1.2458715438842773     <fr> Le Monde.  
->P-0     -3.2018 -2.4925 -1.1116 -0.1039 -0.4667 -0.0987  
 
 # Publications
 
@@ -203,7 +165,18 @@ If you the Prism metric and/or the provided multilingual NMT model, please cite:
     title={Automatic Machine Translation Evaluation in Many Languages via Zero-Shot Paraphrasing},
     author={Brian Thompson and Matt Post},
     year={2020},
-    publisher = {arXiv preprint arXiv:2004.14564},
+    publisher = {arXiv preprint arXiv:2004.14564}
     url={https://arxiv.org/abs/2004.14564}
+}
+```
+
+If you the paraphrase generation algorithm, please also cite:
+```
+@inproceedings{thompson-post-2020-paraphrase, 
+    title={Paraphrase Generation as Zero-Shot Multilingual Translation: Disentangling Semantic Similarity from Lexical and Syntactic Diversity},
+    author={Brian Thompson and Matt Post},
+    year={2020},
+    publisher = {arXiv preprint arXiv:2008.04935}
+    url={https://arxiv.org/abs/2008.04935}
 }
 ```
