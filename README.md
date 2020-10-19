@@ -161,22 +161,26 @@ Swedish (sv), Turkish (tr), Ukrainian (uk), Vietnamese (vi)
 
 If you the Prism metric and/or the provided multilingual NMT model, please cite:
 ```
-@inproceedings{thompson-post-2020-automatic, 
+@inproceedings{thompson-post-2020-automatic,
     title={Automatic Machine Translation Evaluation in Many Languages via Zero-Shot Paraphrasing},
     author={Brian Thompson and Matt Post},
     year={2020},
-    publisher = {arXiv preprint arXiv:2004.14564}
-    url={https://arxiv.org/abs/2004.14564}
+    booktitle = "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+    month = nov,
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
 }
 ```
 
 If you the paraphrase generation algorithm, please also cite:
 ```
-@inproceedings{thompson-post-2020-paraphrase, 
+@inproceedings{thompson-post-2020-paraphrase,
     title={Paraphrase Generation as Zero-Shot Multilingual Translation: Disentangling Semantic Similarity from Lexical and Syntactic Diversity},
     author={Brian Thompson and Matt Post},
     year={2020},
-    publisher = {arXiv preprint arXiv:2008.04935}
-    url={https://arxiv.org/abs/2008.04935}
+    booktitle = "Proceedings of the Fifth Conference on Machine Translation (Volume 1: Research Papers)",
+    month = nov,
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
 }
 ```
