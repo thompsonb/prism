@@ -155,11 +155,14 @@ Norwegian (no), Polish (pl), Portuguese (pt), Romanian, Moldavan (ro),
 Russian (ru), Serbian (sr), Slovak (sk), Slovene (sl), Spanish; Castilian (es),
 Swedish (sv), Turkish (tr), Ukrainian (uk), Vietnamese (vi)
 
+# Data Filtering
+
+The data filtering scripts used to train the Prism model can be found [here](https://github.com/thompsonb/prism_bitext_filter).
 
 
 # Publications
 
-If you the Prism metric and/or the provided multilingual NMT model, please cite:
+If you the Prism metric and/or the provided multilingual NMT model, please cite our [EMNLP paper](https://www.aclweb.org/anthology/2020.emnlp-main.8/):
 ```
 @inproceedings{thompson-post-2020-automatic,
     title={Automatic Machine Translation Evaluation in Many Languages via Zero-Shot Paraphrasing},
@@ -172,7 +175,7 @@ If you the Prism metric and/or the provided multilingual NMT model, please cite:
 }
 ```
 
-If you the paraphrase generation algorithm, please also cite:
+If you the paraphrase generation algorithm, please also cite our [WMT paper](https://aclanthology.org/2020.wmt-1.67/):
 ```
 @inproceedings{thompson-post-2020-paraphrase,
     title={Paraphrase Generation as Zero-Shot Multilingual Translation: Disentangling Semantic Similarity from Lexical and Syntactic Diversity},
